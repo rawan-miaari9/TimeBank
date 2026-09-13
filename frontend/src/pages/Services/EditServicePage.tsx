@@ -91,6 +91,9 @@ const EditServicePage: React.FC = () => {
   const [submitting, setSubmitting] =
     useState(false);
 
+  const [isAiLoading, setIsAiLoading] =
+    useState(false);
+
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -174,6 +177,77 @@ const EditServicePage: React.FC = () => {
 
     loadData();
   }, [id]);
+
+  const handleAiEnhance = async () => {
+    if (
+      !description ||
+      description.trim().length < 5
+    ) {
+      setError(
+        "Please write a short description first so the AI has something to improve!"
+      );
+      return;
+    }
+
+    try {
+      setIsAiLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_URL}/ai/optimize-request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rawDescription: description,
+            categories: categories.map(
+              (category) => category.name
+            ),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "AI service failed"
+        );
+      }
+
+      if (data.title) {
+        setTitle(data.title);
+      }
+
+      if (data.enhancedDescription) {
+        setDescription(data.enhancedDescription);
+      }
+
+      if (data.category) {
+        const match = categories.find(
+          (category) =>
+            category.name.toLowerCase() ===
+            String(data.category)
+              .trim()
+              .toLowerCase()
+        );
+
+        if (match) {
+          setCategoryId(match._id);
+        }
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "AI enhancement failed."
+      );
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -309,18 +383,29 @@ const EditServicePage: React.FC = () => {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Description
-            </label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-sm font-medium">
+                Description
+              </label>
+
+              <button
+                type="button"
+                onClick={handleAiEnhance}
+                disabled={isAiLoading}
+                className="flex items-center gap-1 rounded-md bg-purple-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+              >
+                {isAiLoading
+                  ? "Optimizing..."
+                  : "Enhance with AI"}
+              </button>
+            </div>
 
             <textarea
               required
               rows={5}
               value={description}
               onChange={(event) =>
-                setDescription(
-                  event.target.value
-                )
+                setDescription(event.target.value)
               }
               className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600 dark:bg-gray-700"
             />

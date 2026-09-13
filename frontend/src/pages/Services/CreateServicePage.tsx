@@ -64,7 +64,7 @@ const CreateServicePage: React.FC = () => {
     Category[]
   >([]);
 
-  const [form, setForm] = useState<ServiceForm>({
+  const [form, setForm] = useState({
     title: "",
     description: "",
     categoryId: "",
@@ -76,6 +76,9 @@ const CreateServicePage: React.FC = () => {
     useState(true);
 
   const [submitting, setSubmitting] =
+    useState(false);
+
+  const [isAiLoading, setIsAiLoading] =
     useState(false);
 
   const [error, setError] = useState("");
@@ -118,8 +121,82 @@ const CreateServicePage: React.FC = () => {
     fetchCategories();
   }, []);
 
+  const handleAiEnhance = async () => {
+    if (!form.description || form.description.trim().length < 5) {
+      setError("Please write a short description first so the AI has something to improve!");
+      return;
+    }
+
+    try {
+      setIsAiLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_URL}/ai/optimize-request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rawDescription: form.description,
+            categories: categories.map(
+              (category) => category.name
+            ),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "AI service failed"
+        );
+      }
+
+      setForm((prev) => {
+        const next = {
+          ...prev,
+          title: data.title || prev.title,
+          description:
+            data.enhancedDescription ||
+            prev.description,
+        };
+
+        if (
+          data.category &&
+          (!prev.categoryId ||
+            prev.categoryId === "missing")
+        ) {
+          const match = categories.find(
+            (category) =>
+              category.name.toLowerCase() ===
+              String(data.category)
+                .trim()
+                .toLowerCase()
+          );
+
+          if (match) {
+            next.categoryId = match._id;
+          }
+        }
+
+        return next;
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "AI enhancement failed."
+      );
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
+    event: FormEvent
   ) => {
     event.preventDefault();
 
@@ -254,9 +331,22 @@ const CreateServicePage: React.FC = () => {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
-              Description
-            </label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-sm font-medium">
+                Description
+              </label>
+
+              <button
+                type="button"
+                onClick={handleAiEnhance}
+                disabled={isAiLoading}
+                className="flex items-center gap-1 rounded-md bg-purple-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+              >
+                {isAiLoading
+                  ? "Optimizing..."
+                  : "Enhance with AI"}
+              </button>
+            </div>
 
             <textarea
               required

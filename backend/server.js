@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import aiRoutes from './routes/aiRoutes.js';
 
 // 1. Load environment variables first so mongoose can read MONGO_URI
 dotenv.config();
@@ -34,6 +35,7 @@ app.use("/api/auth", authRoutes); // This mounts your login/register endpoints p
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use('/api/ai', aiRoutes);
 // 6. Start Server
 const PORT = process.env.PORT || 3000;
 
